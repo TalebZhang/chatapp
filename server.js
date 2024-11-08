@@ -24,7 +24,8 @@ webPush.setVapidDetails(
   app.use(cors());
   app.use(bodyParser.json()); // To parse JSON request body
 
-  const dbURI = process.env.MONGODB_URI ||'mongodb://localhost:27017/yourDatabaseName';
+
+  const dbURI = process.env.MONGODB_URI;
 
 mongoose.connect(dbURI, {
     useNewUrlParser: true,
@@ -130,10 +131,6 @@ app.get('/messages/:chatId', async (req, res) => {
     }
 });
 
-// // Function to generate a unique user ID (simple random string)
-// function generateUniqueId() {
-//     return 'user-' + Math.random().toString(36).substr(2, 9);
-// }
 const port = process.env.PORT || 3000;
 app.listen(3000, () => {
     console.log(`Server is running on port ${port}`);
