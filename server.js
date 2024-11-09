@@ -20,7 +20,7 @@ app.use(bodyParser.json()); // To parse JSON request body
 app.use(express.static('public'));
 
 const dbURI = process.env.MONGODB_URI;
-// const dbURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/yourDatabaseName'; // Local DB fallback
+
 
 
 mongoose.connect(dbURI, {
@@ -57,7 +57,7 @@ app.post('/send-audio-message/:chatId', upload.single('audio'), async(req, res) 
 
     try {
         // Save the audio file path to the user's messages
-        user.messages.push({ content: audioFilePath, sender: 'self', type: 'audio' });
+        user.messages.push({ content: audioFilePath, sender: 'self', type: 'audio',timestamp: new Date() });
         await user.save();
 
         res.status(200).json({ message: 'Audio message saved', filePath: audioFilePath });
@@ -70,11 +70,16 @@ app.post('/send-audio-message/:chatId', upload.single('audio'), async(req, res) 
 
 // Endpoint to send a message and save it in the database
 app.post('/send-message/:chatId', async (req, res) => {
-    const { messageContent } = req.body;
+    const { messageContent, messageType = 'text'} = req.body;
     const { chatId } = req.params;
 
     if (!messageContent) {
         return res.status(400).send({ error: 'Message content is required' });
+    }
+
+     // Validate messageType to be either 'text' or 'audio'
+     if (!['text', 'audio'].includes(messageType)) {
+        return res.status(400).send({ error: 'Invalid message type. Must be "text" or "audio".' });
     }
 
     // Find the user or create one if it doesn't exist
@@ -85,9 +90,18 @@ app.post('/send-message/:chatId', async (req, res) => {
         await user.save();
     }
     try {
+
+        // Save the message with the specified type
+        const message = {
+            content: messageContent,
+            sender: 'self', // You can adjust the sender based on your needs
+            type: 'text', // Use 'text' or 'audio'
+            timestamp: new Date()
+        };
+
         // Get or create a user by chatId and add the new message
       
-        user.messages.push({ content: messageContent, sender: 'self' });
+        user.messages.push(message);
         await user.save();
 
         res.status(200).send({ message: 'Message saved successfully' });
@@ -102,10 +116,18 @@ app.post('/send-message/:chatId', async (req, res) => {
 // Fetch messages for a specific user
 app.get('/messages/:chatId', async (req, res) => {
     const { chatId } = req.params;
+    const { type } = req.query; // Query parameter to filter by message type ('text' or 'audio')
+
 
     try {
         const user = await User.findOne({ chatId });
         if (user) {
+            let messages = user.messages;
+
+            // If type query is provided, filter messages by type
+            if (type && ['text', 'audio'].includes(type)) {
+                messages = messages.filter(message => message.type === type);
+            }
             res.status(200).json(user.messages);
         } else {
             res.status(404).send({ error: 'Chat not found' });
