@@ -4,6 +4,8 @@ const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const User = require('./models/User');
 const bodyParser = require('body-parser');
+const multer = require('multer');
+const path = require('path');
 
 
 const app = express();
@@ -18,6 +20,8 @@ app.use(bodyParser.json()); // To parse JSON request body
 app.use(express.static('public'));
 
 const dbURI = process.env.MONGODB_URI;
+// const dbURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/yourDatabaseName'; // Local DB fallback
+
 
 mongoose.connect(dbURI, {
     useNewUrlParser: true,
@@ -25,6 +29,43 @@ mongoose.connect(dbURI, {
 })
 .then(() => console.log('Connected to MongoDB'))
 .catch(error => console.error('MongoDB connection error:', error));
+
+
+// Set up multer for audio file handling
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/audio');  // Directory to save the audio files
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + path.extname(file.originalname)); // Unique file name
+    }
+});
+const upload = multer({ storage: storage });
+
+// Handle audio message upload
+app.post('/send-audio-message/:chatId', upload.single('audio'), async(req, res) => {
+    const chatId = req.params.chatId;
+    const audioFilePath = req.file.path; // Path to the saved audio file
+
+    // Find the user or create one if it doesn't exist
+    let user = await User.findOne({ chatId });
+    if (!user) {
+        // If user doesn't exist, create a new one
+        user = new User({ chatId, messages: [] });
+        await user.save();
+    }
+
+    try {
+        // Save the audio file path to the user's messages
+        user.messages.push({ content: audioFilePath, sender: 'self', type: 'audio' });
+        await user.save();
+
+        res.status(200).json({ message: 'Audio message saved', filePath: audioFilePath });
+    } catch (error) {
+        console.error('Error saving audio message:', error);
+        res.status(500).send({ error: 'Failed to save audio message' });
+    }
+});
 
 
 // Endpoint to send a message and save it in the database
