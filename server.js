@@ -16,8 +16,9 @@ const cors = require('cors');
 app.use(cors());
 app.use(bodyParser.json()); // To parse JSON request body
 
-// Serve the public folder (containing your HTML, service-worker.js, etc.)
-app.use(express.static('public'));
+
+app.use('/uploads', express.static(path.join('/tmp')));  // Serve from /tmp folder directly
+
 
 const dbURI = process.env.MONGODB_URI;
 
@@ -56,8 +57,8 @@ app.post('/send-audio-message/:chatId', upload.single('audio'), async(req, res) 
     }
 
     try {
-// Construct a URL for the uploaded audio (assuming you're serving it from a static directory)
-const audioUrl = `https://chatapp-bsrk.onrender.com/${audioFilePath.replace('/tmp', '')}`;
+// Construct a URL for the uploaded audio (assuming it's served from /uploads)
+const audioUrl = `https://chatapp-bsrk.onrender.com/uploads/${path.basename(audioFilePath)}`;
 
 
         // Save the audio file path to the user's messages
@@ -94,6 +95,16 @@ app.post('/send-message/:chatId', async (req, res) => {
         await user.save();
     }
     try {
+
+         // Check if the message type is 'audio' and if the URL already exists in the messages array
+         if (type === 'audio') {
+            // Check if the audio URL is already in the database for this user
+            const isAudioDuplicate = user.messages.some(message => message.type === 'audio' && message.content === messageContent);
+
+            if (isAudioDuplicate) {
+                return res.status(400).send({ error: 'This audio message has already been sent' });
+            }
+        }
 
         // Save the message with the specified type
         const message = {
