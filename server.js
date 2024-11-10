@@ -56,11 +56,15 @@ app.post('/send-audio-message/:chatId', upload.single('audio'), async(req, res) 
     }
 
     try {
+// Construct a URL for the uploaded audio (assuming you're serving it from a static directory)
+const audioUrl = `https://chatapp-bsrk.onrender.com/${audioFilePath.replace('uploads/', '')}`;
+
+
         // Save the audio file path to the user's messages
-        user.messages.push({ content: audioFilePath, sender: 'self', type: 'audio',timestamp: new Date() });
+        user.messages.push({ content: audioUrl, sender: 'self', type: 'audio',timestamp: new Date() });
         await user.save();
 
-        res.status(200).json({ message: 'Audio message saved', filePath: audioFilePath });
+        res.status(200).json({ message: 'Audio message saved', filePath: audioUrl });
     } catch (error) {
         console.error('Error saving audio message:', error);
         res.status(500).send({ error: 'Failed to save audio message' });
@@ -95,7 +99,7 @@ app.post('/send-message/:chatId', async (req, res) => {
         const message = {
             content: messageContent,
             sender: 'self', // You can adjust the sender based on your needs
-            type: 'text', // Use 'text' or 'audio'
+            type: type, // Use 'text' or 'audio'
             timestamp: new Date()
         };
 
