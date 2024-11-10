@@ -74,7 +74,7 @@ const audioUrl = `https://chatapp-bsrk.onrender.com/${audioFilePath.replace('upl
 
 // Endpoint to send a message and save it in the database
 app.post('/send-message/:chatId', async (req, res) => {
-    const { messageContent, messageType = 'text'} = req.body;
+    const { messageContent, type = 'text'} = req.body;
     const { chatId } = req.params;
 
     if (!messageContent) {
@@ -82,7 +82,7 @@ app.post('/send-message/:chatId', async (req, res) => {
     }
 
      // Validate messageType to be either 'text' or 'audio'
-     if (!['text', 'audio'].includes(messageType)) {
+     if (!['text', 'audio'].includes(type)) {
         return res.status(400).send({ error: 'Invalid message type. Must be "text" or "audio".' });
     }
 
