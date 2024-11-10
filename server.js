@@ -34,7 +34,7 @@ mongoose.connect(dbURI, {
 // Set up multer for audio file handling
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, 'uploads/audio');  // Directory to save the audio files
+        cb(null, '/tmp');  // Directory to save the audio files
     },
     filename: function (req, file, cb) {
         cb(null, Date.now() + path.extname(file.originalname)); // Unique file name
@@ -57,7 +57,7 @@ app.post('/send-audio-message/:chatId', upload.single('audio'), async(req, res) 
 
     try {
 // Construct a URL for the uploaded audio (assuming you're serving it from a static directory)
-const audioUrl = `https://chatapp-bsrk.onrender.com/${audioFilePath.replace('uploads/', '')}`;
+const audioUrl = `https://chatapp-bsrk.onrender.com/${audioFilePath.replace('/tmp', '')}`;
 
 
         // Save the audio file path to the user's messages
