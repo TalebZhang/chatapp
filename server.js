@@ -161,19 +161,54 @@ const wss = new WebSocket.Server({ server });
 
 wss.on('connection', ws => {
     console.log('New client connected');
-    ws.on('message', message => {
-        // Broadcast incoming message to all other clients
-        wss.clients.forEach(client => {
-            if (client !== ws && client.readyState === WebSocket.OPEN) {
-                client.send(message);
+    ws.on('message', (message) => {
+        try {
+            // Check if message is binary (Blob or ArrayBuffer)
+            if (message instanceof Buffer || message instanceof ArrayBuffer) {
+                // Send the binary data to all other clients
+                wss.clients.forEach(client => {
+                    if (client !== ws && client.readyState === WebSocket.OPEN) {
+                        client.send(message); // Send the binary data as is
+                    }
+                });
+            } else {
+                // If the message is a string (text or JSON)
+                const data = JSON.parse(message);
+
+                // Handle image messages
+                if (data.type === 'image') {
+                    // Send the image data to all other clients
+                    wss.clients.forEach(client => {
+                        if (client !== ws && client.readyState === WebSocket.OPEN) {
+                            client.send(JSON.stringify({
+                                type: 'image',
+                                data: data.data // Base64 image data
+                            }));
+                        }
+                    });
+                }
+
+                // Handle other message types (text, audio, etc.)
+                else if (data.type === 'text') {
+                    wss.clients.forEach(client => {
+                        if (client !== ws && client.readyState === WebSocket.OPEN) {
+                            client.send(JSON.stringify({
+                                type: 'text',
+                                data: data.data // Text message
+                            }));
+                        }
+                    });
+                }
             }
-        });
+        } catch (error) {
+            console.error('Error handling WebSocket message:', error);
+        }
     });
+
     ws.on('close', () => {
         console.log('Client disconnected');
     });
 });
-
 
 
 
