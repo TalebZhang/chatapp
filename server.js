@@ -21,7 +21,9 @@ app.use(bodyParser.json()); // To parse JSON request body
 app.use('/uploads', express.static(path.join('/tmp')));  // Serve from /tmp folder directly
 
 
-const dbURI = process.env.MONGODB_URI;
+
+ const dbURI = process.env.MONGODB_URI;
+
 
 
 
@@ -73,6 +75,35 @@ const audioUrl = `https://chatapp-bsrk.onrender.com/uploads/${path.basename(audi
     }
 });
 
+app.post('/upload-image/:chatId', upload.single('image'), async(req, res) => {
+    const chatId = req.params.chatId;
+    const imageUrl = req.file.path; // Path to the saved audio file
+
+    // Find the user or create one if it doesn't exist
+    let user = await User.findOne({ chatId });
+    if (!user) {
+        // If user doesn't exist, create a new one
+        user = new User({ chatId, messages: [] });
+        await user.save();
+    }
+
+    try {
+// Construct a URL for the uploaded audio (assuming it's served from /uploads)
+const imageUrls = `https://chatapp-bsrk.onrender.com/uploads/${path.basename(imageUrl)}`;
+
+
+        // Save the image file path to the user's messages
+        user.messages.push({ content: imageUrls, sender: 'self', type: 'image',timestamp: new Date() });
+        await user.save();
+
+        res.status(200).json({ message: 'image message saved', filePath: audioUrl });
+    } catch (error) {
+        console.error('Error saving image message:', error);
+        res.status(500).send({ error: 'Failed to save image message' });
+    }
+});
+
+
 
 // Endpoint to send a message and save it in the database
 app.post('/send-message/:chatId', async (req, res) => {
@@ -84,7 +115,7 @@ app.post('/send-message/:chatId', async (req, res) => {
     }
 
      // Validate messageType to be either 'text' or 'audio'
-     if (!['text', 'audio'].includes(type)) {
+     if (!['text', 'audio', 'image'].includes(type)) {
         return res.status(400).send({ error: 'Invalid message type. Must be "text" or "audio".' });
     }
 
@@ -104,6 +135,16 @@ app.post('/send-message/:chatId', async (req, res) => {
 
             if (isAudioDuplicate) {
                 return res.status(400).send({ error: 'This audio message has already been sent' });
+            }
+        }
+
+        // Check if the message type is 'audio' and if the URL already exists in the messages array
+        if (type === 'image') {
+            // Check if the audio URL is already in the database for this user
+            const isImageDuplicate = user.messages.some(message => message.type === 'image' && message.content === messageContent);
+
+            if (isImageDuplicate) {
+                return res.status(400).send({ error: 'This image message has already been sent' });
             }
         }
 
@@ -141,7 +182,7 @@ app.get('/messages/:chatId', async (req, res) => {
             let messages = user.messages;
 
             // If type query is provided, filter messages by type
-            if (type && ['text', 'audio'].includes(type)) {
+            if (type && ['text', 'audio','image'].includes(type)) {
                 messages = messages.filter(message => message.type === type);
             }
             res.status(200).json(user.messages);
@@ -157,6 +198,7 @@ app.get('/messages/:chatId', async (req, res) => {
 
 const WebSocket = require('ws');
 const port = process.env.PORT || 3000;
+
 const wss = new WebSocket.Server({ server });
 
 wss.on('connection', ws => {
@@ -211,7 +253,68 @@ wss.on('connection', ws => {
 });
 
 
+// Login route
+app.post('/api/auth/login', async (req, res) => {
+    const { email, password } = req.body;
 
-server.listen(3000, () => {
+    try {
+        // Find the user by email
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid credentials.' }); // User not found
+        }
+
+        // Compare the entered password with the stored hashed password
+        const isMatch = await user.comparePassword(password);
+
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Invalid credentials.' }); // Password mismatch
+        }
+
+        // If credentials are valid
+        res.status(200).json({ message: 'Login successful!' });
+    } catch (error) {
+        console.error('Error during login:', error);
+        res.status(500).json({ message: "Internal Server Error", error: error.message });
+ 
+    }
+});
+
+app.post('/api/auth/register', async (req, res) => {
+    const { chatId, email, password} = req.body;
+
+    try {
+        // Check if email or name already exists in the database
+        const existingUserByEmail =await User.findOne({email});
+        const existingUserByChatId = await User.findOne({chatId});
+
+        if (existingUserByEmail) {
+            return res.status(400).json({ message: 'Email is already taken.' });
+        }
+
+        if (existingUserByChatId) {
+            return res.status(400).json({ message: 'Name is already taken.' });
+        }
+   
+        // If no duplicates found, create a new user
+        const newUser = new User({
+            chatId,
+            email,
+            password, // The password will be hashed automatically before saving
+            messages: [] // Initialize with an empty messages array
+        });
+
+        await newUser.save();
+        console.log('save success')
+        res.status(201).json({ message: 'Registration successful!' });
+    } catch (error) {
+        console.error('Error during registration:', error);
+        res.status(500).json({ message: "Internal Server Error", error: error.message });
+ 
+    }
+});
+
+server.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
