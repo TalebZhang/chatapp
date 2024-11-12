@@ -48,8 +48,9 @@ const upload = multer({ storage: storage });
 
 // Handle audio message upload
 app.post('/send-audio-message', upload.single('audio'), async(req, res) => {
-    const {email} = req.body;
     const audioFilePath = req.file.path; // Path to the saved audio file
+    const { type,email } = req.query; // Query parameter to filter by message type ('text' or 'audio')
+
 
     // Find the user or create one if it doesn't exist
     let user = await User.findOne({ email });
@@ -74,6 +75,7 @@ const audioUrl = `https://chatapp-bsrk.onrender.com/uploads/${path.basename(audi
         res.status(500).send({ error: 'Failed to save audio message' });
     }
 });
+
 
 app.post('/upload-image/:chatId', upload.single('image'), async(req, res) => {
     const chatId = req.params.chatId;
