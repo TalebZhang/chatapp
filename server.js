@@ -179,8 +179,7 @@ app.post('/send-message', async (req, res) => {
 
 // Fetch messages for a specific user
 app.get('/messages', async (req, res) => {
-    const { type } = req.query; // Query parameter to filter by message type ('text' or 'audio')
-    const {email} = req.body;
+    const { type,email } = req.query; // Query parameter to filter by message type ('text' or 'audio')
 
     try {
         const user = await User.findOne({ email });
