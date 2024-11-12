@@ -47,25 +47,25 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Handle audio message upload
-app.post('/send-audio-message/:chatId', upload.single('audio'), async(req, res) => {
-    const chatId = req.params.chatId;
+app.post('/send-audio-message', upload.single('audio'), async(req, res) => {
+    const {email} = req.body;
     const audioFilePath = req.file.path; // Path to the saved audio file
 
     // Find the user or create one if it doesn't exist
-    let user = await User.findOne({ chatId });
+    let user = await User.findOne({ email });
     if (!user) {
-        // If user doesn't exist, create a new one
-        user = new User({ chatId, messages: [] });
-        await user.save();
+        console.log('no audio user error');
     }
 
     try {
 // Construct a URL for the uploaded audio (assuming it's served from /uploads)
 const audioUrl = `https://chatapp-bsrk.onrender.com/uploads/${path.basename(audioFilePath)}`;
 
-
+        if (email=== 'test@gmail.com'){
         // Save the audio file path to the user's messages
-        user.messages.push({ content: audioUrl, sender: 'self', type: 'audio',timestamp: new Date() });
+        user.messages.push({ content: audioUrl, sender: 'self', type: 'audio',timestamp: new Date() });}else{
+        user.messages.push({ content: audioUrl, sender: 'user', type: 'audio',timestamp: new Date() });   
+        }
         await user.save();
 
         res.status(200).json({ message: 'Audio message saved', filePath: audioUrl });
@@ -106,9 +106,9 @@ const imageUrls = `https://chatapp-bsrk.onrender.com/uploads/${path.basename(ima
 
 
 // Endpoint to send a message and save it in the database
-app.post('/send-message/:chatId', async (req, res) => {
-    const { messageContent, type = 'text'} = req.body;
-    const { chatId } = req.params;
+app.post('/send-message', async (req, res) => {
+    const {email, messageContent, type = 'text'} = req.body;
+    
 
     if (!messageContent) {
         return res.status(400).send({ error: 'Message content is required' });
@@ -120,11 +120,10 @@ app.post('/send-message/:chatId', async (req, res) => {
     }
 
     // Find the user or create one if it doesn't exist
-    let user = await User.findOne({ chatId });
+    let user = await User.findOne({ email });
     if (!user) {
         // If user doesn't exist, create a new one
-        user = new User({ chatId, messages: [] });
-        await user.save();
+        console.log('no email error');
     }
     try {
 
@@ -148,13 +147,21 @@ app.post('/send-message/:chatId', async (req, res) => {
             }
         }
 
+        if( email === 'test@gmail.com'){
         // Save the message with the specified type
         const message = {
             content: messageContent,
             sender: 'self', // You can adjust the sender based on your needs
             type: type, // Use 'text' or 'audio'
             timestamp: new Date()
-        };
+        };} else {
+            const message = {
+                content: messageContent,
+                sender: 'user', // You can adjust the sender based on your needs
+                type: type, // Use 'text' or 'audio'
+                timestamp: new Date()
+            };
+        }
 
         // Get or create a user by chatId and add the new message
       
@@ -171,13 +178,12 @@ app.post('/send-message/:chatId', async (req, res) => {
 
 
 // Fetch messages for a specific user
-app.get('/messages/:chatId', async (req, res) => {
-    const { chatId } = req.params;
+app.get('/messages', async (req, res) => {
     const { type } = req.query; // Query parameter to filter by message type ('text' or 'audio')
-
+    const {email} = req.body;
 
     try {
-        const user = await User.findOne({ chatId });
+        const user = await User.findOne({ email });
         if (user) {
             let messages = user.messages;
 
@@ -273,7 +279,10 @@ app.post('/api/auth/login', async (req, res) => {
         }
 
         // If credentials are valid
-        res.status(200).json({ message: 'Login successful!' });
+        res.status(200).json({
+            message: 'Login successful!',
+            user: { email: user.email }  // Include the user's email in the response
+        });
     } catch (error) {
         console.error('Error during login:', error);
         res.status(500).json({ message: "Internal Server Error", error: error.message });
