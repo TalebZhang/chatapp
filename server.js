@@ -154,18 +154,21 @@ app.post('/send-message', async (req, res) => {
             sender: 'self', // You can adjust the sender based on your needs
             type: type, // Use 'text' or 'audio'
             timestamp: new Date()
-        };} else {
+        };
+        user.messages.push(message);
+    } else {
             const message = {
                 content: messageContent,
                 sender: 'user', // You can adjust the sender based on your needs
                 type: type, // Use 'text' or 'audio'
                 timestamp: new Date()
             };
+            user.messages.push(message);
         }
 
         // Get or create a user by chatId and add the new message
       
-        user.messages.push(message);
+        
         await user.save();
 
         res.status(200).send({ message: 'Message saved successfully' });
