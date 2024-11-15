@@ -294,6 +294,7 @@ const io = socketio(expressServer,{
     cors: {
         origin: [
             "https://chatapp-bsrk.onrender.com",
+            "https://yozipic.top"
             // 'https://LOCAL-DEV-IP-HERE' //if using a phone or another computer
         ],
         methods: ["GET", "POST"]
