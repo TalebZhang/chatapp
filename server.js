@@ -6,7 +6,7 @@ const User = require('./models/User');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const path = require('path');
-const https = require('https')
+const http = require('http');  // Use the 'http' module
 const socketio = require('socket.io');
 const fs = require('fs');
 
@@ -289,7 +289,8 @@ const cert = fs.readFileSync('cert.crt');
 
 //we changed our express setup so we can use https
 //pass the key and cert to createServer on https
-const expressServer = https.createServer({key, cert}, app);
+
+const expressServer = http.createServer(app);
 //create our socket.io server... it will listen to our express port
 const io = socketio(expressServer,{
     cors: {
