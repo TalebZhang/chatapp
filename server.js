@@ -13,7 +13,7 @@ const fs = require('fs');
 
 const app = express();
 
-const port = process.env.PORT || 3000;
+const port = process.env.PORT;
 
 app.use(express.json());
 app.use(cookieParser());
@@ -23,6 +23,7 @@ app.use(cors());
 app.use(bodyParser.json()); // To parse JSON request body
 
 
+app.use(express.static(__dirname))
 app.use('/uploads', express.static(path.join('/tmp')));  // Serve from /tmp folder directly
 
 
