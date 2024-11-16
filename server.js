@@ -284,8 +284,8 @@ app.post('/api/auth/register', async (req, res) => {
 //we generated them with mkcert
 // $ mkcert create-ca
 // $ mkcert create-cert
-const key = fs.readFileSync('cert.key');
-const cert = fs.readFileSync('cert.crt');
+// const key = fs.readFileSync('cert.key');
+// const cert = fs.readFileSync('cert.crt');
 
 //we changed our express setup so we can use https
 //pass the key and cert to createServer on https
@@ -410,7 +410,19 @@ io.on('connection',(socket)=>{
         // console.log(offers)
     })
 
+    // Handle a hangup signal (call end)
+    socket.on('hangup', () => {
+        console.log(`User ${socket.id} hung up`);
+        socket.broadcast.emit('hangup');
+    });
+
+    socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+        socket.broadcast.emit('hangup'); // Broadcast hangup on disconnect
+    });
+
 })
+
 
 expressServer.listen(port, () => {
     console.log(`Server is running on port ${port}`);
