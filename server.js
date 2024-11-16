@@ -8,7 +8,8 @@ const multer = require('multer');
 const path = require('path');
 const http = require('http');  // Use the 'http' module
 const socketio = require('socket.io');
-const fs = require('fs');
+const bcrypt = require('bcryptjs');
+
 
 
 const app = express();
