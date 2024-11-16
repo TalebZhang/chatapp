@@ -228,8 +228,7 @@ app.post('/api/auth/login', async (req, res) => {
         }
 
         // Compare the entered password with the stored hashed password
-        const isMatch = await user.comparePassword(password);
-
+        const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ message: 'Invalid credentials.' }); // Password mismatch
         }
@@ -316,15 +315,36 @@ const connectedSockets = [
     //username, socketId
 ]
 
-io.on('connection',(socket)=>{
-    // console.log("Someone has connected");
-    const userName = socket.handshake.auth.userName;
-    const password = socket.handshake.auth.password;
+io.on('connection', async (socket) => {
+    const { userName, password } = socket.handshake.auth;
 
-    if(password !== "x"){
+    if (!userName || !password) {
+        console.error("No username or password provided");
         socket.disconnect(true);
         return;
     }
+
+    try {
+        // Fetch the user from the database
+        const user = await User.findOne({ userName });
+
+        if (!user) {
+            console.error("User not found");
+            socket.disconnect(true);
+            return;
+        }
+
+        // Compare the provided password with the stored password (hashed)
+        const isPasswordValid = await user.comparePassword(password); 
+
+        if (!isPasswordValid) {
+            console.error("Invalid password for user:", userName);
+            socket.disconnect(true);
+            return;
+        }
+
+        console.log("User connected:", userName);
+
     connectedSockets.push({
         socketId: socket.id,
         userName
@@ -420,6 +440,10 @@ io.on('connection',(socket)=>{
         console.log('User disconnected:', socket.id);
         socket.broadcast.emit('hangup'); // Broadcast hangup on disconnect
     });
+    } catch (error) {
+        console.error("Error in user authentication:", error);
+        socket.disconnect(true);
+    }
 
 })
 
